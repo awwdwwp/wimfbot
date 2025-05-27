@@ -1,5 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram import ReplyKeyboardMarkup
 import os
 from dotenv import load_dotenv
 
@@ -144,6 +145,7 @@ rules_text = """📜 **Правила**:
 3.5 Делегації у сезоні дозволені, але не більше 2 учасників у делегації"""
 
 
+
 # Menus
 def main_menu():
     return InlineKeyboardMarkup([
@@ -161,14 +163,48 @@ def exchange_menu():
         [InlineKeyboardButton("🔙 Назад", callback_data="back")]
     ])
 
-# Handlers
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привіт! Обери опцію:", reply_markup=main_menu())
+# Text Commands
+async def cmd_north(update, context):
+    await update.message.reply_text(region_texts["north"])
 
+async def cmd_south(update, context):
+    await update.message.reply_text(region_texts["south"])
+
+async def cmd_europe(update, context):
+    await update.message.reply_text(region_texts["europe"])
+
+async def cmd_asia(update, context):
+    await update.message.reply_text(region_texts["asia"])
+
+async def cmd_rules(update, context):
+    await update.message.reply_text(rules_text)
+
+async def cmd_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (
+        "📋 *Список доступних команд:*\n\n"
+        "🔹 /north — Показати обміни для Північної Америки\n"
+        "🔹 /south — Показати обміни для Південної Америки\n"
+        "🔹 /europe — Показати обміни для Європи\n"
+        "🔹 /asia — Показати обміни для Азії та Океанії\n"
+        "🔹 /rules — Показати правила конкурсу\n"
+        "🔹 /commands — Показати цей список команд\n"
+    )
+    await update.message.reply_markdown(text)
+
+# Start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        ["Лист обміну"],
+        ["Правила"],
+        ["Команди"]  # ← new button
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    await update.message.reply_text("Привіт! Обери опцію:", reply_markup=reply_markup)
+
+# Button Handler (inline)
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     match query.data:
         case "menu_exchange":
             await query.edit_message_text("Оберіть регіон:", reply_markup=exchange_menu())
@@ -185,10 +221,30 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         case "back":
             await query.edit_message_text("Повернулись в головне меню:", reply_markup=main_menu())
 
-# Run the bot
+# ReplyKeyboard text handler
+async def text_listener(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.lower()
+    if text == "команди":
+        await cmd_commands(update, context)
+    elif text == "правила":
+        await cmd_rules(update, context)
+    elif text == "лист обміну":
+        await update.message.reply_text("Оберіть регіон:", reply_markup=exchange_menu())
+    else:
+        await update.message.reply_text("Невідома команда. Спробуйте ще раз.")
+
+# Run
 if __name__ == '__main__':
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("north", cmd_north))
+    app.add_handler(CommandHandler("south", cmd_south))
+    app.add_handler(CommandHandler("europe", cmd_europe))
+    app.add_handler(CommandHandler("asia", cmd_asia))
+    app.add_handler(CommandHandler("rules", cmd_rules))
+    app.add_handler(CommandHandler("commands", cmd_commands))
     app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_listener))
+
     print("✅ Bot is running...")
     app.run_polling()
