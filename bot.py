@@ -150,7 +150,6 @@ rules_text = """📜 **Правила**:
 def main_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("▶️ Лист обміну", callback_data="menu_exchange")],
-        [InlineKeyboardButton("📝 Скарги та пропозиції", url="https://t.me/your_admin_username")],
         [InlineKeyboardButton("📜 Правила", callback_data="rules")]
     ])
 
